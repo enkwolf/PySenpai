@@ -1,19 +1,20 @@
 """
-The core module defines the basic framework for testing (parts of) Python 
+The core module defines the basic framework for testing (parts of) Python
 programs. It contains three different test functions for testing individual
-functions, main programs code snippets and source code / documentary (static
-testing). It also provides necessary preparation functions that prepare the
-student module for testing.
+functions, main programs, code snippets, and source code / documentary (static
+testing). Pylint review can also be integrated into the test results. This
+module also provides necessary preparation functions that prepare the student
+module for testing.
 
 In addition to test functions, the module also has default callbacks that
-provide a reasonably default behavior for testing simple functions and 
+provide a reasonable default behavior for testing simple functions and 
 programs. A number of convenience callbacks are also provided that can be used
 to replace default behavior - these cover most common cases of complication in
 validating test results.
 
 Understanding the testing procedure is necessary when writing checking programs
 - especially in case of more complex tests. The testing procedure and optional 
-arguments that are outlined in each testing function should help you Understand
+arguments that are outlined in each testing function should help you understand
 how information flows throughout the test and where and with what information 
 your callbacks will be called.
 
@@ -131,6 +132,19 @@ class JsonOutput(dict):
         )
             
     def wrap_to(self, wrapper_dict, keyname):
+        """
+        Puts the evaluation dictionary inside another dictionary, using the
+        specified *keyname*. The object then assumes the contents of
+        *wrapper_dict* as its own. This method is used for routine type
+        exercises that need to provided more context information than just the
+        evaluation report.
+        
+        The reason this method is needed is the automatic output of the json
+        report when this module exits. Therefore the output of the checker must
+        always be contained in this module's internal dictionary - it cannot
+        print its own output.
+        """
+    
         wrapper_dict[keyname] = self.copy()
         self.clear()
         self.update(wrapper_dict)
@@ -190,8 +204,8 @@ def find_objects(st_module, object_type, first=True, name_only=False):
 class OutputParseError(Exception):
     """
     This exception should be raised by :ref:`output parsers <output-parsers>` if
-    they fail to parse the student code's output properly.  This exception is handled
-    in :func:`~test_core.test_function` and will result in:
+    they fail to parse the student code's output properly.  This exception is
+    handled in :func:`~test_core.test_function` and will result in:
     
     * the parsed result set to None
     * output of OutputParseError message with INCORRECT flag
@@ -214,7 +228,7 @@ class OutputParseError(Exception):
 
 class NoAdditionalInfo(Exception):
     """
-    This exception should be rasied by 
+    This exception should be raised by 
     :ref:`additional information functions <info-functions>` if they come to the
     conclusion that there is in fact no additional information that they can 
     give. It prevents the info function's message from being shown in the output. 
@@ -223,6 +237,10 @@ class NoAdditionalInfo(Exception):
     pass
 
 class NoMatchingObject(Exception):
+    """
+    Raised by :func:`~test_core.find_objects` when it's unable to find objects
+    of the specified type.
+    """
     
     pass
 
@@ -265,19 +283,21 @@ class StringOutput(object):
         
 class TranslationDict(dict):
     """
-    This class is a customized dictionary that supports the multilingual support 
-    needed by PySenpai. Values are stored using two-part keys: keyword and language. 
-    Internally the keys are represented as strings in the form of :code:`"keyword:language"`. 
-    Three convenience methods are provided for storing and reading values from the 
-    dictionary.
+    This class is a customized dictionary that supports the multilingual support
+    needed by PySenpai. Values are stored using two-part keys: keyword and
+    language. Internally the keys are represented as strings in the form of
+    :code:`"keyword:language"`.
+    Three convenience methods are provided for storing and reading values from
+    the dictionary.
     
-    The core module comes with a set of predefined messages for each of test functions. 
-    When implementing checkers you can provide a TranslationDict object of your own 
-    which will be used to update the default dictionary for the test. See section 
-    :ref:`Output Messages <output-messages>` for more information. 
+    The core module comes with a set of predefined messages for each of test
+    functions. When implementing checkers you can provide a TranslationDict
+    object of your own which will be used to update the default dictionary for
+    the test. See section :ref:`Output Messages <output-messages>` for more
+    information.
     
-    The class is usually used for output messages, but it is also handy for defining 
-    and retrieving regular expressions in multiple languages. 
+    The class is usually used for output messages, but it is also handy for
+    defining and retrieving regular expressions in multiple languages. 
     """   
     
     def set_msg(self, key, lang, value):
@@ -335,7 +355,6 @@ class TranslationDict(dict):
     
     def update(self, patch):
         """
-        
         update(patch)
         
         Updates the dictionary from another TranslationDict instance. If a key already
@@ -347,7 +366,6 @@ class TranslationDict(dict):
         given value is a string a dictionary is created and the string is placed into the
         content field.
         """
-        
         
         for key, value in patch.items():
             try:
@@ -362,8 +380,9 @@ class TranslationDict(dict):
                     self.__setitem__(key, {"content": value})
                 else:
                     self.__setitem__(key, value)
-            
 
+                    
+## Default messages ##
 
 default_import_msgs = dim = TranslationDict()
 default_program_test_msgs = dptm = TranslationDict()
@@ -583,7 +602,7 @@ dltm.set_msg("pylint_fail_low_score", "fi", dict(content="Koodisi sai liian pien
 dltm.set_msg("pylint_fail_low_score", "fi", dict(content="Koodisi sai liian pienet laatupisteet ({global_note:.1f} / 10.0).\nTavoite: 5+ / 10.0."))
 
 
-# Default and convenience functions for various keyword arguments
+## Default and convenience functions for various keyword arguments ##
 
 class SimpleRef(object):
     """
@@ -811,6 +830,8 @@ def default_new_test(args, inputs):
     
     pass
 
+## Internal stuff ##
+    
 default_presenters = {
     "arg": default_value_presenter,
     "input": default_input_presenter, 
@@ -821,8 +842,6 @@ default_presenters = {
     "vars": default_vars_presenter,
     "ref_vars": default_vars_presenter
 }
-    
-
 
 # Output function. Change this to fit your environment if needed. 
     
@@ -833,11 +852,12 @@ def output(_msg, _flag, **_format_args):
     """
     
     if _msg["content"]:
-        json_output.new_msg(_msg["content"].format(**_format_args), 
-                            _flag, _msg.get("triggers", []), 
-                            _msg.get("hints", [])
+        json_output.new_msg(
+            _msg["content"].format(**_format_args), 
+            _flag,
+            _msg.get("triggers", []),
+            _msg.get("hints", [])
         )
-    
         
 def reset_locals(module):
     """
@@ -855,7 +875,6 @@ def reset_locals(module):
     for name in m_locals:
         delattr(module, name)
     
-
 def walk_trace(tb, tb_list):    
     """
     Turns the stack traceback into a list by recurring through it. 
@@ -896,7 +915,8 @@ def get_exception_line(module, etrace):
             code = cf.readline()
         return st_last_frame.f_lineno, code.strip()
         
-# Actual test functions
+## Actual test functions ##
+
 def set_tester(name):
     """
     Sets the tester name. Call this is in the checker if you need the checker's
@@ -906,19 +926,30 @@ def set_tester(name):
     json_output.set_tester(name)
 
 class CommaSplitAction(argparse.Action):
+    """
+    Action class for argument parsing. Takes a comma separated string and
+    returns the split result as integers. Used in routine exercise parsing with
+    the argument that chooses question types to use.
+    """
     
     def __call__(self, parser, namespace, values, options=None):
         setattr(namespace, self.dest, [int(v) for v in values.split(",")])
+
 
 def parse_command():
     """
     parse_command() -> list, str
     
-    This parses the checker command for files to test and testing language. 
-    Language is indicated by either -l, --locale or --lang followed by a standard
-    two character language codes. Flags -g (--grind) and -r (--request-params) are for
-    grind type checkers and used to indicate whether it is being used to check an
-    instance or to generate a new instance. Everything else is considered as files to test.
+    This parses the checker command for files to test and testing language. Available
+    arguments are:
+    
+    * -l --lang --locale : sets the checker language using language codes
+    * -q --questions : enabled question types (integers) as comma-separated string
+    * -c --check : check a routine exercise answer (and generate another)
+    * -r --request : request new routine exercise instance
+    
+    Everything else is considered as files to test.
+
     Returns all files' basenames as a list and the language as a separate value.
     
     If the files are located in subfolders, adds the folders to the path. This makes them
@@ -1370,10 +1401,12 @@ def test_function(st_module, func_names, test_vector, ref_func,
         if result_object_extractor:
             res = result_object_extractor(args, res, st_out)
             
+        # Validate results
         try: 
             validator(ref, res, st_out)
             output(msgs.get_msg("CorrectResult", lang), CORRECT)
         except AssertionError as e:
+            # Result was incorrect
             output(msgs.get_msg(e, lang, "IncorrectResult"), INCORRECT)
             output(msgs.get_msg("PrintTestVector", lang), DEBUG,
                 args=arg_presenter(stored_args),
@@ -1392,6 +1425,8 @@ def test_function(st_module, func_names, test_vector, ref_func,
             values_printed = True
             if error_refs or custom_tests or test_recurrence:
                 output(msgs.get_msg("AdditionalTests", lang), INFO)
+                
+            # Run false references
             for eref_func in error_refs:
                 if ref_needs_inputs:
                     eref = eref_func(argument_cloner(stored_args), inps)
@@ -1402,15 +1437,19 @@ def test_function(st_module, func_names, test_vector, ref_func,
                     output(msgs.get_msg(eref_func.__name__, lang), INFO)
                 except AssertionError as e:
                     pass
+                    
+            # Run custom tests
             for custom_test in custom_tests:
                 try: 
                     custom_test(res, st_out, o.content, ref, stored_args, inps)
                 except AssertionError as e:
                     output(msgs.get_msg(e, lang, custom_test.__name__), INFO)
-                
+            
+            # Result recurrence test
             if test_recurrence and (res == prev_res or st_out and st_out == prev_out):
                 output(msgs.get_msg("RepeatingResult", lang), INFO)
-                
+            
+            # Run info functions
             if info_funcs:
                 output(msgs.get_msg("AdditionalInfo", lang), INFO)
                 for info_func in info_funcs:
@@ -1421,6 +1460,7 @@ def test_function(st_module, func_names, test_vector, ref_func,
                     except NoAdditionalInfo:
                         pass
         else:
+            # Result was correct
             output(msgs.get_msg("PrintTestVector", lang), DEBUG,
                 args=arg_presenter(stored_args),
                 call=call_presenter(func_names[lang], stored_args)
@@ -1432,7 +1472,7 @@ def test_function(st_module, func_names, test_vector, ref_func,
             output(msgs.get_msg("PrintStudentResult", lang), DEBUG, res=res_presenter(res), parsed=parsed_presenter(st_out), output=o.content)
             values_printed = True
                 
-            
+        # Validate student output    
         if message_validator:
             try: 
                 message_validator(o.content, stored_args, inps)
@@ -1479,7 +1519,6 @@ def test_program(st_module, test_vector, ref_func,
     placed inside :code:`if __name__ == "__main__":`. Overall the test procedure
     is simpler than function testing because there are no arguments to pass - 
     only inputs. 
-    
     
     * *st_module* - a module object that's being tested
     * *test_vector* - input vectors to be given as inputs; Inputs are automatically 
@@ -1646,6 +1685,7 @@ def test_program(st_module, test_vector, ref_func,
         if not hide_output:
             output(msgs.get_msg("PrintStudentOutput", lang), INFO, output=o.content)
                 
+        # Parse output
         try:
             st_out = output_parser(o.content)
         except OutputParseError as e:
@@ -1661,10 +1701,12 @@ def test_program(st_module, test_vector, ref_func,
             output(msgs.get_msg("PrintStudentOutput", lang), INFO, output=o.content)
             continue
 
+        # Validation
         try: 
             validator(ref, None, st_out)
             output(msgs.get_msg("CorrectResult", lang), CORRECT)
         except AssertionError as e:
+            # Result was incorrect
             output(msgs.get_msg(e, lang, "IncorrectResult"), INCORRECT)
             output(msgs.get_msg("PrintInputVector", lang), DEBUG, inputs=input_presenter(inputs))
             output(msgs.get_msg("PrintStudentResult", lang), DEBUG,
@@ -1675,6 +1717,8 @@ def test_program(st_module, test_vector, ref_func,
             values_printed = True
             if error_refs or custom_tests or test_recurrence:
                 output(msgs.get_msg("AdditionalTests", lang), INFO)
+            
+            # Run false references
             for eref_func in error_refs:
                 eref = eref_func(*inputs)
                 try: 
@@ -1682,15 +1726,19 @@ def test_program(st_module, test_vector, ref_func,
                     output(msgs.get_msg(eref_func.__name__, lang), INFO)
                 except AssertionError as e:
                     pass
+                    
+            # Run custom tests
             for test in custom_tests:
                 try: 
                     test(None, st_out, o.content, ref, None, inputs)
                 except AssertionError as e:
                     output(msgs.get_msg(e, lang, test.__name__), INFO)
                     
+            # Test for result recurrence
             if test_recurrence and st_out == prev_out:
                 output(msgs.get_msg("RepeatingResult", lang), INFO)
 
+            # Run info functions
             if info_funcs:
                 output(msgs.get_msg("AdditionalInfo", lang), INFO)
                 for info_func in info_funcs:
@@ -1701,6 +1749,7 @@ def test_program(st_module, test_vector, ref_func,
                     except NoAdditionalInfo:
                         pass
         else:
+            # Result was correct
             output(msgs.get_msg("PrintInputVector", lang), DEBUG, inputs=input_presenter(inputs))
             output(msgs.get_msg("PrintStudentResult", lang), DEBUG,
                 parsed=parsed_presenter(st_out),
@@ -1709,7 +1758,7 @@ def test_program(st_module, test_vector, ref_func,
             output(msgs.get_msg("PrintStudentOutput", lang), INFO, output=o.content)  
             values_printed = True
 
-                    
+        # Validate student output
         if message_validator:
             try: 
                 message_validator(o.content, None, inputs)
@@ -1743,7 +1792,7 @@ def test_code_snippet(st_code, constructor, ref_func,
     """
     test_code_snippet(st_code, constructor, ref_func[, lang="en"][, kwarg1][, ...])
     
-    Tests a code snippet. The snipper can be put into a larger context by using
+    Tests a code snippet. The snippet can be put into a larger context by using
     a *constructor* function. The snippet along with its context is written into
     a temporary module and run. After running the namespace of the module is
     evaluated against a reference object provided by the reference function.
@@ -1830,6 +1879,8 @@ def test_code_snippet(st_code, constructor, ref_func,
             shown in the output, including the information function's return value.
     """
     
+    
+    # One time preparations
     correct = True
     
     save = sys.stdout
@@ -1861,11 +1912,12 @@ def test_code_snippet(st_code, constructor, ref_func,
     
     ref = ref_func(inputs)
     
+    # Construct the module and write it to a file
     full_code = constructor(st_code)
-    
     with open("temp_module.py", "w") as target:
         target.write(full_code)
-        
+    
+    # Load the module and obtain output
     try:
         temp_module = importlib.import_module("temp_module")
     except:
@@ -1882,11 +1934,13 @@ def test_code_snippet(st_code, constructor, ref_func,
             output(msgs.get_msg("PrintInputVector", lang), DEBUG, inputs=presenter(inputs))
         return False
 
+    # Resume output to normal stdout and show output if not hidden
     values_printed = False
     sys.stdout = save
     if not hide_output:
         output(msgs.get_msg("PrintStudentOutput", lang), INFO, output=o.content)
 
+    # Parse the output into a result
     try:
         st_out = output_parser(o.content)
     except OutputParseError as e:
@@ -1900,10 +1954,12 @@ def test_code_snippet(st_code, constructor, ref_func,
         output(msgs.get_msg("PrintStudentOutput", lang), INFO, output=o.content)
         return False
 
+    # Validate the result
     try:
         validator(ref, temp_module, st_out)
         output(msgs.get_msg("CorrectResult", lang), CORRECT)
     except AssertionError as e:
+        # Result was incorrect
         correct = False
         output(msgs.get_msg(e, lang, "IncorrectResult"), INCORRECT)
         if inputs:
@@ -1922,6 +1978,7 @@ def test_code_snippet(st_code, constructor, ref_func,
         if error_refs or custom_tests:
             output(msgs.get_msg("AdditionalTests", lang), INFO)
 
+        # Run validation against false references
         for eref_func in error_refs:
             eref = eref_func(inputs)
             try: 
@@ -1930,12 +1987,14 @@ def test_code_snippet(st_code, constructor, ref_func,
             except AssertionError as e:
                 pass
 
+        # Run custom tests
         for test in custom_tests:
             try: 
                 test(temp_module, st_out, o.content, ref, None, inputs)
             except AssertionError as e:
                 output(msgs.get_msg(e, lang, test.__name__), INFO)
 
+        # Run info functions
         if info_funcs:
             output(msgs.get_msg("AdditionalInfo", lang), INFO)
             for info_func in info_funcs:
@@ -1946,6 +2005,7 @@ def test_code_snippet(st_code, constructor, ref_func,
                 except NoAdditionalInfo:
                     pass
     else:
+        # Result was correct
         if inputs:
             output(msgs.get_msg("PrintInputVector", lang), DEBUG, inputs=input_presenter(inputs))
         output(msgs.get_msg("PrintStudentResult", lang), DEBUG,
@@ -1955,6 +2015,7 @@ def test_code_snippet(st_code, constructor, ref_func,
         )
         values_printed = True
 
+    # Validate output messages
     if message_validator:
         try: 
             message_validator(o.content, None, inputs)
